@@ -303,3 +303,9 @@ rclone config reconnect gdrive:
 - **iCloud timestamp behavior** — after upload, iCloud sets the remote timestamp to the upload time instead of preserving the local edit time. `sync_engine.py` updates the local file's mtime after each upload to keep them in sync and prevent re-downloads.
 - **iCloud-only formats** — Pages, Numbers, and Keynote files are downloaded but not usable on Linux.
 - **pyicloud scope** — only Drive files are accessible; Notes, Reminders, and Keychain are not supported.
+
+---
+
+## License
+
+[MIT](LICENSE)

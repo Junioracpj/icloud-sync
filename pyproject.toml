@@ -2,6 +2,7 @@
 name = "icloud-sync"
 version = "1.0.0"
 description = "Sync iCloud Drive files to a local folder"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "pyicloud",
