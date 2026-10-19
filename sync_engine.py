@@ -47,6 +47,8 @@ STATE_FILE = Path(_setting("ICLOUD_SYNC_STATE", Path(__file__).parent / ".sync_s
 
 MISSING_APPLE_ID = f"No Apple ID configured. Run `uv run python authenticate.py`, or set ICLOUD_APPLE_ID in {CONFIG_FILE}."
 IGNORE_FILE = Path(__file__).parent / ".syncignore"
+# Per-machine list of iCloud folders to leave alone (never downloaded, uploaded or deleted).
+SKIP_FILE = Path(_setting("ICLOUD_SYNC_SKIP", Path.home() / ".config" / "icloud-sync" / "skip.json")).expanduser()
 ICON_OK = Path(__file__).parent / "icons" / "folder-cloud-ok.svg"
 ICON_ERROR = Path(__file__).parent / "icons" / "folder-cloud-error.svg"
 ICON_SYNCING = Path(__file__).parent / "icons" / "folder-cloud-syncing.svg"
@@ -105,6 +107,36 @@ def load_ignore_patterns():
                 if line and not line.startswith("#"):
                     patterns.append(line)
     return patterns
+
+
+def load_skip_folders():
+    """Read {"skip": ["Photos/2019", ...]} from SKIP_FILE, creating an empty one on first use.
+
+    A broken file raises instead of returning []: silently syncing a folder the user
+    skipped (and maybe deleted locally) would trash it from iCloud.
+    """
+    if not SKIP_FILE.exists():
+        save_skip_folders([])
+        return []
+    try:
+        data = json.loads(SKIP_FILE.read_text() or "{}")
+        folders = data.get("skip", [])
+        if not isinstance(folders, list) or not all(isinstance(f, str) for f in folders):
+            raise ValueError('"skip" must be a list of folder paths')
+    except (ValueError, AttributeError) as e:
+        raise ValueError(f"Invalid skip list {SKIP_FILE}: {e}. Fix it before syncing.") from None
+    return [f.strip().strip("/") for f in folders if f.strip().strip("/")]
+
+
+def save_skip_folders(folders):
+    SKIP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SKIP_FILE.write_text(json.dumps({"skip": folders}, indent=2, ensure_ascii=False) + "\n")
+
+
+def is_skipped(rel_path, skip_folders):
+    """Skip entries are paths from the iCloud Drive root (globs allowed), e.g. `Photos/2019`."""
+    return any(rel_path == f or rel_path.startswith(f + "/") or fnmatch.fnmatch(rel_path, f)
+               for f in skip_folders)
 
 
 def is_ignored(name, rel_path, patterns):
@@ -392,7 +424,7 @@ def upload_file_existing(node, local_path, verbose=False):
     return "uploaded"
 
 
-def collect_tasks(node, local_dir, synced_files, last_sync_ts=None, ignore_patterns=None, skip_downloads=False, verbose=False, shared=False):
+def collect_tasks(node, local_dir, synced_files, last_sync_ts=None, ignore_patterns=None, skip_downloads=False, verbose=False, shared=False, skip_folders=()):
     """Walk one folder level; classify each entry into one of six scenarios.
 
     For every name in (local_children ∪ remote_children):
@@ -454,6 +486,12 @@ def collect_tasks(node, local_dir, synced_files, last_sync_ts=None, ignore_patte
 
         if is_ignored(name, rel, ignore_patterns):
             safe_print(f"  ~ Ignoring: {rel}", verbose=verbose, verbose_only=True)
+            continue
+
+        # Skipped folders are left untouched on both sides and dropped from the
+        # manifest, so un-skipping later downloads them again instead of deleting.
+        if is_skipped(rel, skip_folders):
+            safe_print(f"  ~ Skipping: {rel}", verbose=verbose, verbose_only=True)
             continue
 
         # iCloud listed it but the DriveNode fetch failed — defer to next sync.
@@ -578,6 +616,7 @@ def collect_tasks(node, local_dir, synced_files, last_sync_ts=None, ignore_patte
                     future = scan_executor.submit(
                         collect_tasks, child_node, child_path, synced_files,
                         last_sync_ts, ignore_patterns, child_skip, verbose, child_shared,
+                        skip_folders,
                     )
                     scan_futures[future] = (child_node, child_path, child_skip, child_name, child_shared)
 
@@ -917,6 +956,7 @@ def collect_ignored_remote(node, path_prefix, ignore_patterns, verbose=False):
 
 def run_sync(api, full=False, upload_only=False, verbose=False):
     ignore_patterns = load_ignore_patterns()
+    skip_folders = load_skip_folders()
     SYNC_DIR.mkdir(parents=True, exist_ok=True)
     set_folder_icon("syncing")
 
@@ -931,7 +971,8 @@ def run_sync(api, full=False, upload_only=False, verbose=False):
 
     print("\nPhase 1: Scanning iCloud Drive...")
     download_tasks, upload_tasks, delete_tasks, local_delete_tasks, new_synced = collect_tasks(
-        api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=verbose
+        api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=verbose,
+        skip_folders=skip_folders,
     )
 
     print(f"\n  Found: {len(download_tasks)} to check/download, "
@@ -966,6 +1007,7 @@ def run_sync(api, full=False, upload_only=False, verbose=False):
 
 def run_scan(api, full=False, verbose=False):
     ignore_patterns = load_ignore_patterns()
+    skip_folders = load_skip_folders()
     state = load_state()
     synced_files = set(state["synced_files"])
     last_sync = state.get("last_sync")
@@ -973,7 +1015,8 @@ def run_scan(api, full=False, verbose=False):
 
     print("\nScanning iCloud Drive...")
     download_tasks, upload_tasks, delete_tasks, local_delete_tasks, _ = collect_tasks(
-        api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=verbose
+        api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=verbose,
+        skip_folders=skip_folders,
     )
 
     return {

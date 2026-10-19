@@ -7,6 +7,7 @@ from sync_engine import (
     APPLE_ID, SYNC_DIR, COOKIE_DIR, STATE_FILE, MISSING_APPLE_ID,
     load_ignore_patterns, load_state, save_state,
     set_folder_icon, run_sync, run_cleanup,
+    SKIP_FILE, load_skip_folders, save_skip_folders,
 )
 
 
@@ -47,13 +48,47 @@ def authenticate():
     return api
 
 
+def manage_skip(args):
+    try:
+        folders = load_skip_folders()
+    except ValueError as e:
+        sys.exit(str(e))
+    if args.skip:
+        folder = args.skip.strip().strip("/")
+        if folder not in folders:
+            save_skip_folders(folders + [folder])
+        print(f"Skipping '{folder}' from now on (saved in {SKIP_FILE}).")
+        local = SYNC_DIR / folder
+        if local.exists():
+            print(f"Its local copy was left in place: {local}")
+            print("You can delete it to free space; the iCloud copy is not affected.")
+    elif args.unskip:
+        folder = args.unskip.strip().strip("/")
+        if folder not in folders:
+            sys.exit(f"'{folder}' is not in the skip list. See `sync.py --skipped`.")
+        save_skip_folders([f for f in folders if f != folder])
+        print(f"'{folder}' will sync again. Run `sync.py --full` to download it now.")
+    else:
+        if not folders:
+            print("No skipped folders.")
+        for f in folders:
+            print(f)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sync iCloud Drive to local folder")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--full", action="store_true")
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--upload-only", action="store_true")
+    parser.add_argument("--skip", metavar="FOLDER", help="stop syncing an iCloud folder (path from the iCloud Drive root)")
+    parser.add_argument("--unskip", metavar="FOLDER", help="sync a skipped folder again")
+    parser.add_argument("--skipped", action="store_true", help="list skipped folders")
     args = parser.parse_args()
+
+    if args.skip or args.unskip or args.skipped:
+        manage_skip(args)
+        return
 
     # One sync at a time (the 5-min timer and a manual run would corrupt the state file).
     lock = open(STATE_FILE.with_suffix(".lock"), "w")
@@ -64,6 +99,10 @@ def main():
         return
 
     ignore_patterns = load_ignore_patterns()
+    try:
+        skip_folders = load_skip_folders()
+    except ValueError as e:
+        sys.exit(str(e))
 
     print("Authenticating with iCloud...")
     api = authenticate()
@@ -92,6 +131,8 @@ def main():
     print(f"\nSyncing iCloud Drive <-> {SYNC_DIR}")
     if ignore_patterns:
         print(f"  Ignoring {len(ignore_patterns)} patterns from .syncignore")
+    if skip_folders:
+        print(f"  Skipping {len(skip_folders)} folder(s) from {SKIP_FILE}")
 
     state = load_state()
     last_sync = state.get("last_sync")

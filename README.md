@@ -190,6 +190,35 @@ Default patterns: `__pycache__/`, `*.pyc`, `.venv/`, `node_modules/`, `.DS_Store
 
 Ignored files are never downloaded, never uploaded, and skipped silently during scan (use `-v` or `"verbose": true` to see them).
 
+### Skipping folders (per machine)
+
+To keep a folder in iCloud but **not** on this machine, list it in `~/.config/icloud-sync/skip.json` (created empty on the first sync; override the path with `ICLOUD_SYNC_SKIP`). Paths start at the iCloud Drive root; globs are allowed:
+
+```json
+{
+  "skip": [
+    "Photos/2019",
+    "Backups/*"
+  ]
+}
+```
+
+The file is re-read on every sync, so just edit it — no command needed. Remove a line to sync that folder again (run `sync.py --full` to download it right away). If the file is not valid JSON the sync stops with an error instead of ignoring the list.
+
+Optional helpers that edit the same file:
+
+```bash
+uv run python sync.py --skip "Photos/2019"
+uv run python sync.py --unskip "Photos/2019"
+uv run python sync.py --skipped
+```
+
+Each machine has its own list, so the VPS can skip folders your PC keeps, and your folder names stay out of the repo.
+
+A skipped folder is never downloaded, uploaded or deleted on either side, and `--cleanup` never touches it — unlike `.syncignore`, whose matches `--cleanup` **trashes from iCloud**. Its existing local copy is left in place; delete it yourself to free space (the iCloud copy is unaffected).
+
+> Skip first, then delete the local copy. Deleting a synced folder locally *before* skipping it makes the next sync trash it from iCloud.
+
 ### Re-authentication
 
 Session data is stored in `~/.config/icloud-sync/session/`. If the session expires, stop the server, re-authenticate, then restart:

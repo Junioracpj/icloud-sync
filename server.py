@@ -108,7 +108,7 @@ def sync_all(req: SyncRequest = SyncRequest()):
 def sync_download(req: SyncRequest = SyncRequest()):
     from sync_engine import (
         load_ignore_patterns, load_state, save_state,
-        collect_tasks, execute_downloads, SYNC_DIR,
+        collect_tasks, execute_downloads, SYNC_DIR, load_skip_folders,
     )
     from datetime import datetime, timezone
 
@@ -122,7 +122,8 @@ def sync_download(req: SyncRequest = SyncRequest()):
         last_sync_ts = None if req.full or last_sync is None else last_sync
 
         download_tasks, _, _, _, new_synced = collect_tasks(
-            api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=req.verbose
+            api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=req.verbose,
+            skip_folders=load_skip_folders(),
         )
 
         stats = {"downloaded": 0, "uploaded": 0, "deleted_remote": 0, "deleted_local": 0,
@@ -161,7 +162,7 @@ def sync_upload(req: SyncRequest = SyncRequest()):
 def sync_delete(req: SyncRequest = SyncRequest()):
     from sync_engine import (
         load_ignore_patterns, load_state, save_state,
-        collect_tasks, execute_deletes, SYNC_DIR,
+        collect_tasks, execute_deletes, SYNC_DIR, load_skip_folders,
     )
     from datetime import datetime, timezone
 
@@ -174,7 +175,8 @@ def sync_delete(req: SyncRequest = SyncRequest()):
         last_sync_ts = None if req.full or last_sync is None else last_sync
 
         _, _, delete_tasks, _, new_synced = collect_tasks(
-            api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=req.verbose
+            api.drive.root, SYNC_DIR, synced_files, last_sync_ts, ignore_patterns, verbose=req.verbose,
+            skip_folders=load_skip_folders(),
         )
 
         stats = {"downloaded": 0, "uploaded": 0, "deleted_remote": 0, "deleted_local": 0,
