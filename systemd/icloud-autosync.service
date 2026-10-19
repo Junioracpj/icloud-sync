@@ -1,0 +1,14 @@
+[Unit]
+Description=iCloud Drive two-way sync (one run)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/icloud-sync
+ExecStart=%h/.local/bin/uv run python sync.py
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+Nice=10
+IOSchedulingClass=idle

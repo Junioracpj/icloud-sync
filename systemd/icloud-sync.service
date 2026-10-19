@@ -1,0 +1,16 @@
+[Unit]
+Description=iCloud Drive Sync Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/icloud-sync
+ExecStart=%h/.local/bin/uv run uvicorn server:app --host 127.0.0.1 --port 8765
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

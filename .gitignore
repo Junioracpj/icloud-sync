@@ -1,0 +1,15 @@
+# Personal sync data — never publish (contains your file list; reusing it elsewhere can trash iCloud files)
+.sync_state.json*
+.sync_state.lock
+
+# Local tool/app state
+.claude/settings.local.json
+.wwebjs_cache/
+applet/plugins_wings.backup
+
+# Build artifacts
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+applet/target/

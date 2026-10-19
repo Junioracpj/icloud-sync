@@ -1,0 +1,26 @@
+[package]
+name = "cosmic-applet-icloud-sync"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "COSMIC panel applet showing the status of the icloud-autosync service"
+
+[dependencies]
+# Same libcosmic revision as the colortemp applet, which matches the installed COSMIC.
+libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "20dfd7c236208930634881ec52d22e7a353206dd", default-features = false, features = [
+    "applet",
+    "multi-window",
+    "tokio",
+    "wayland",
+    "winit",
+] }
+tokio = { version = "1", features = ["process", "rt", "io-util", "time"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true

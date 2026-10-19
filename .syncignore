@@ -1,0 +1,39 @@
+# Git repositories
+.git/
+
+# Python virtualenvs
+.venv/
+venv/
+env/
+.env/
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# Python build artifacts
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Python tools cache
+.tox/
+.nox/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+__MACOSX/
+
+# Thumbnails
+._*
+.Thumbnails/

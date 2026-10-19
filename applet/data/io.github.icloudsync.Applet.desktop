@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=iCloud Sync
+Comment=Status of the iCloud Drive two-way sync
+Type=Application
+Exec=cosmic-applet-icloud-sync
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Applet;iCloud;Sync;Cloud;
+Icon=io.github.icloudsync.Applet-ok-symbolic
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicShrinkable=true
+X-HostWaylandDisplay=true
+X-CosmicHoverPopup=Auto

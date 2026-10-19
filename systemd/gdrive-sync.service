@@ -1,0 +1,13 @@
+[Unit]
+Description=Google Drive Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash %h/Documents/icloud-sync/gdrive-sync.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

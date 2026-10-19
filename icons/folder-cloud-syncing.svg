@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Folder base -->
+  <path d="M32 96v320c0 17.7 14.3 32 32 32h384c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H240l-48-48H64c-17.7 0-32 14.3-32 32z" fill="#1565C0"/>
+  <path d="M32 160h448v256c0 17.7-14.3 32-32 32H64c-17.7 0-32-14.3-32-32V160z" fill="#1E88E5"/>
+  <!-- Cloud -->
+  <path d="M340 240c-5.5-30-32-52-63-52-25 0-47 14-58 35-27 3-48 26-48 53 0 30 24 54 54 54h120c25 0 45-20 45-45 0-24-19-43-43-45z" fill="white" opacity="0.9"/>
+  <!-- Sync arrows (circular) -->
+  <path d="M230 275 A26 26 0 0 1 256 249" fill="none" stroke="#1565C0" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="228,261 218,277 234,279" fill="#1565C0"/>
+  <path d="M282 275 A26 26 0 0 1 256 301" fill="none" stroke="#1565C0" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="284,289 294,273 278,271" fill="#1565C0"/>
+</svg>

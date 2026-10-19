@@ -1,0 +1,10 @@
+[Unit]
+Description=iCloud Drive Sync Trigger
+After=icloud-sync.service
+Requires=icloud-sync.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s -X POST http://127.0.0.1:8765/sync
+StandardOutput=journal
+StandardError=journal

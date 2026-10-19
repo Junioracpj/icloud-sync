@@ -1,0 +1,17 @@
+[project]
+name = "icloud-sync"
+version = "1.0.0"
+description = "Sync iCloud Drive files to a local folder"
+requires-python = ">=3.12"
+dependencies = [
+    "pyicloud",
+    "fastapi",
+    "uvicorn[standard]",
+    "requests-toolbelt>=1.0.0",
+]
+
+[project.scripts]
+icloud-sync = "icloud_sync:main"
+
+[dependency-groups]
+dev = []

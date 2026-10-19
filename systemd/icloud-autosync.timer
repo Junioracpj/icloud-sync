@@ -1,0 +1,10 @@
+[Unit]
+Description=Run iCloud Drive sync at login and every 5 minutes
+
+[Timer]
+OnStartupSec=1min
+OnUnitInactiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
