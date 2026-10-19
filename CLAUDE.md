@@ -8,16 +8,14 @@ Two-way sync between iCloud Drive and a local folder on Linux, using pyicloud.
 ~/Documents/icloud-sync/       # Project root
 ├── sync.py                    # Main sync script (iCloud)
 ├── authenticate.py            # Standalone authentication script (iCloud)
-├── install.sh                 # One-shot installer for both iCloud + Google Drive
+├── install.sh                 # One-shot installer
 ├── pyproject.toml             # Dependencies (managed with uv)
 ├── uv.lock                    # Lock file
 ├── .sync_state.json           # Sync state (auto-generated, do not edit)
 ├── .syncignore                # Patterns for files/folders to skip (like .gitignore)
 ├── systemd/                   # Systemd unit files (copied to ~/.config/systemd/user/ by install.sh)
 │   ├── icloud-sync.service
-│   ├── icloud-sync.timer
-│   ├── gdrive-sync.service
-│   └── gdrive-sync.timer
+│   └── icloud-sync.timer
 └── CLAUDE.md
 ```
 
@@ -41,7 +39,7 @@ The sync runs in two phases:
 
 ## Key configuration
 
-Per-user settings (`ICLOUD_APPLE_ID`, `ICLOUD_SYNC_DIR`, `GDRIVE_SYNC_DIR`, `ICLOUD_SYNC_COOKIES`, `ICLOUD_SYNC_STATE`) come from environment variables, then `~/.config/icloud-sync/config` (KEY=value, outside the repo). `authenticate.py` asks for the Apple ID and saves it there. Never hardcode personal values in the repo.
+Per-user settings (`ICLOUD_APPLE_ID`, `ICLOUD_SYNC_DIR`, `ICLOUD_SYNC_COOKIES`, `ICLOUD_SYNC_STATE`) come from environment variables, then `~/.config/icloud-sync/config` (KEY=value, outside the repo). `authenticate.py` asks for the Apple ID and saves it there. Never hardcode personal values in the repo.
 
 Tuning constants (top of sync_engine.py):
 
@@ -68,31 +66,12 @@ Ignored files are:
 ## Fresh install (new machine)
 
 ```bash
-git clone <this-repo> ~/Documents/icloud-sync
+git clone https://github.com/Junioracpj/icloud-sync.git ~/Documents/icloud-sync
 cd ~/Documents/icloud-sync
 ./install.sh
 ```
 
-The script installs `uv` and `rclone` if missing, authenticates both iCloud and Google Drive interactively, runs the initial Google Drive bisync, and enables both systemd timers.
-
-Local sync folders created:
-- `~/Documents/icloud-drive` — iCloud Drive
-- `~/Documents/gdrive` — Google Drive
-
-## Google Drive sync (rclone)
-
-Uses `rclone bisync` for two-way sync every 30 minutes. After the initial `--resync`, it tracks changes on both sides. Conflicts are resolved by keeping the newer file.
-
-```bash
-# Check status
-systemctl --user status gdrive-sync.timer
-
-# Watch logs
-journalctl --user -u gdrive-sync.service -f
-
-# Run manually
-systemctl --user start gdrive-sync.service
-```
+The script installs `uv` if missing, authenticates iCloud interactively (asks for the Apple ID), and enables the systemd timer. Files sync to `~/Documents/icloud-drive` unless `ICLOUD_SYNC_DIR` is set.
 
 ## Commands
 

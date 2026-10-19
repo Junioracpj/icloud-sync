@@ -1,29 +1,22 @@
-# cloud-sync
+# icloud-sync
 
-Two-way sync for **iCloud Drive** and **Google Drive** on Linux, running automatically every 30 minutes via systemd.
-
-| Driver | Tool | Local folder |
-|---|---|---|
-| iCloud Drive | [pyicloud](https://github.com/picklepete/pyicloud) + FastAPI server | `~/Documents/icloud-drive` |
-| Google Drive | [rclone bisync](https://rclone.org/bisync/) | `~/Documents/gdrive` |
+Two-way sync for **iCloud Drive** on Linux, built on [pyicloud](https://github.com/picklepete/pyicloud) + a FastAPI server, running automatically via systemd. Files land in `~/Documents/icloud-drive` by default.
 
 ---
 
 ## Fresh install
 
 ```bash
-git clone <this-repo> ~/Documents/icloud-sync
+git clone https://github.com/Junioracpj/icloud-sync.git ~/Documents/icloud-sync
 cd ~/Documents/icloud-sync
 ./install.sh
 ```
 
 The installer will:
-1. Install `uv` and `rclone` if not already present
+1. Install `uv` if not already present
 2. Install Python dependencies
-3. Authenticate iCloud (Apple ID + 2FA)
-4. Configure Google Drive via rclone (opens browser for OAuth)
-5. Run the initial Google Drive bisync
-6. Enable both systemd timers
+3. Authenticate iCloud (asks for your Apple ID, password and 2FA code)
+4. Enable the systemd timer
 
 ---
 
@@ -167,14 +160,12 @@ Per-user settings are read from `~/.config/icloud-sync/config` (`KEY=value` line
 ```ini
 ICLOUD_APPLE_ID=you@icloud.com          # written by authenticate.py
 ICLOUD_SYNC_DIR=~/Documents/icloud-drive
-GDRIVE_SYNC_DIR=~/Documents/gdrive
 ```
 
 | Setting | Default | Purpose |
 |---|---|---|
 | `ICLOUD_APPLE_ID` | *(none, asked by `authenticate.py`)* | Apple account |
 | `ICLOUD_SYNC_DIR` | `~/Documents/icloud-drive` | Local iCloud folder |
-| `GDRIVE_SYNC_DIR` | `~/Documents/gdrive` | Local Google Drive folder |
 | `ICLOUD_SYNC_COOKIES` | `~/.config/icloud-sync/session` | pyicloud session data |
 | `ICLOUD_SYNC_STATE` | `<repo>/.sync_state.json` | Sync state file |
 
@@ -239,40 +230,6 @@ systemctl --user start icloud-sync-trigger.timer
 
 ---
 
-## Google Drive
-
-Uses `rclone bisync` for two-way sync. Conflicts are resolved by keeping the newer file.
-
-### First sync (manual, required once)
-
-```bash
-rclone bisync gdrive: ~/Documents/gdrive \
-    --resync --create-empty-src-dirs \
-    --transfers 10 --checkers 20 \
-    --log-level INFO --progress
-```
-
-### Manage the timer
-
-```bash
-systemctl --user status gdrive-sync.timer        # timer status
-systemctl --user status gdrive-sync.service      # last sync result
-journalctl --user -u gdrive-sync.service -f      # live logs
-systemctl --user start gdrive-sync.service       # run now
-systemctl --user stop gdrive-sync.timer          # pause auto-sync
-systemctl --user start gdrive-sync.timer         # resume auto-sync
-```
-
-### Re-authentication
-
-rclone stores OAuth tokens in `~/.config/rclone/rclone.conf`. If the token expires:
-
-```bash
-rclone config reconnect gdrive:
-```
-
----
-
 ## Project structure
 
 ```
@@ -281,7 +238,7 @@ rclone config reconnect gdrive:
 ├── sync_engine.py          # Core sync logic (scan, download, upload, delete, cleanup)
 ├── sync.py                 # CLI shim for manual use
 ├── authenticate.py         # iCloud first-time interactive auth (2FA)
-├── install.sh              # One-shot installer for both drivers
+├── install.sh              # One-shot installer
 ├── pyproject.toml          # Python dependencies (uv)
 ├── uv.lock
 ├── .sync_state.json        # iCloud sync state (auto-generated, do not edit)
@@ -289,9 +246,7 @@ rclone config reconnect gdrive:
 ├── systemd/                # Unit files (installed to ~/.config/systemd/user/)
 │   ├── icloud-sync.service          # Runs uvicorn server (persistent)
 │   ├── icloud-sync-trigger.service  # One-shot curl to POST /sync
-│   ├── icloud-sync-trigger.timer    # Fires trigger every 30 minutes
-│   ├── gdrive-sync.service
-│   └── gdrive-sync.timer
+│   └── icloud-sync-trigger.timer    # Fires trigger every 30 minutes
 └── README.md
 ```
 
