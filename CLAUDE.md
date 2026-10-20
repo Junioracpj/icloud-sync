@@ -176,4 +176,5 @@ pyicloud stores session data in `~/.config/icloud-sync/session/`. If the session
 - Scan phase retries failed folders automatically (up to 5 times with increasing waits)
 - iCloud-only formats (Pages, Numbers, Keynote) are downloaded but not usable on Linux
 - pyicloud cannot access Notes, Reminders, or Keychain — only Drive files
+- pyicloud uploads with `allow_conflict`, so re-uploading a changed file makes iCloud keep the old one and save the new version as `name 2.ext`. `upload_file_existing` fixes this right after the upload (`_replace_remote`): it trashes the old version and renames the new one back to the original name. Without it, every edit synced from a machine left a numbered copy in iCloud that the other machines then downloaded.
 - After upload, iCloud sets the remote timestamp to the upload time (not the local file's edit time). To prevent the next sync from seeing the remote as newer and re-downloading, `sync.py` updates the local file's mtime to `time.time()` immediately after each successful upload.

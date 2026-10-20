@@ -83,7 +83,7 @@ def _send_file_streaming(self, folder_id, file_object, zone="com.apple.CloudDocs
     )
     self._raise_if_error(request)
     content_response = request.json()["singleFile"]
-    self._update_contentws(folder_id, content_response, document_id, file_object, zone, **kwargs)
+    return self._update_contentws(folder_id, content_response, document_id, file_object, zone, **kwargs)
 
 
 DriveService.send_file = _send_file_streaming
@@ -93,9 +93,30 @@ def _upload(node, local_path, file_size):
     with open(local_path, "rb") as f:
         if file_size > LARGE_UPLOAD_THRESHOLD:
             with large_upload_lock:
-                node.upload(f)
-        else:
-            node.upload(f)
+                return node.upload(f)
+        return node.upload(f)
+
+
+def _replace_remote(old, upload_result, name):
+    # pyicloud uploads with allow_conflict, so re-uploading an existing name makes iCloud
+    # keep the old file and store the new one as "name 2.ext". Trash the old version
+    # (recoverable 30 days) and give the new upload its real name back.
+    try:
+        doc = upload_result["results"][0]["document"]
+    except (TypeError, KeyError, IndexError):
+        return
+    if old is None or doc.get("name") == name:
+        return
+    old.move_to_trash()
+    drivewsid = f"FILE::{doc['zone']}::{doc['document_id']}"
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            old.connection.rename_items(drivewsid, doc["etag"], name)
+            return
+        except Exception:
+            if attempt == MAX_RETRIES:
+                raise
+            time.sleep(RETRY_BASE_WAIT * attempt)
 
 
 def load_ignore_patterns():
@@ -388,6 +409,7 @@ def upload_file_new(node, local_path, verbose=False):
 def upload_file_existing(node, local_path, verbose=False):
     # BUG 3 FIX: only catch KeyError/IndexError; other exceptions propagate to retry loop
     remote_modified = None
+    existing = None
     try:
         existing = node[local_path.name]
         remote_modified = remote_mtime(existing)
@@ -412,15 +434,17 @@ def upload_file_existing(node, local_path, verbose=False):
                 time.sleep(wait)
 
             safe_print(f"  ↑ Uploading: {file_name}  {format_size(file_size)}", verbose=verbose, verbose_only=True)
-            _upload(node, local_path, file_size)
-            upload_ts = time.time()
-            os.utime(local_path, (upload_ts, upload_ts))
-            safe_print(f"  ✓ Done: {file_name}", verbose=verbose, verbose_only=True)
-            return "uploaded"
+            result = _upload(node, local_path, file_size)
+            break
         except Exception as e:
             if attempt == MAX_RETRIES:
                 raise e
 
+    # Outside the retry loop: a failed rename must not upload yet another copy.
+    _replace_remote(existing, result, local_path.name)
+    upload_ts = time.time()
+    os.utime(local_path, (upload_ts, upload_ts))
+    safe_print(f"  ✓ Done: {file_name}", verbose=verbose, verbose_only=True)
     return "uploaded"
 
 
